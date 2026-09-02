@@ -5,8 +5,8 @@ from random import randint
 
 synthesized_length = 256
 
-# Tester plusieurs valeurs de tailles de voisinage
-patch_size = 8
+# Tester plusieurs valeurs de tailles de voisinage, taille impaire pour centrer 
+patch_size = 7
 
 # Tester plusieurs valeurs de epsilon entre 0.05, 0.1, 0.2, 0.5
 epsilon = 0.1
@@ -20,6 +20,7 @@ texture_width, texture_height, _ = np.shape(texture_array)
 
 final_img = Image.new("RGB", [synthesized_length, synthesized_length])
 final_img_array = np.array(final_img)
+print(final_img_array)
 
 # Générer position aléatoire pour l'emplacement de départ du sample texture 
 # dans l'image finale synthétisée
@@ -30,6 +31,9 @@ seed_y = randint(0, synthesized_length - texture_height - 1)
 for i in range(seed_x, seed_x + texture_width):
 	for j in range(seed_y, seed_y + texture_height):
 		final_img_array[i, j] = texture_array[i - seed_x, j - seed_y]
+
+# Remplissage de l'image finale
+
 
 plt.figure(0)
 plt.title("Sample texture")
