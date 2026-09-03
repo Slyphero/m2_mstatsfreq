@@ -5,6 +5,7 @@ from random import randint
 
 class EfrosLeung:
 	def __init__(self, image_path, synthesis_length, patch_size, epsilon):
+		# Initialisation des paramètres
 		self.SYNTHESIS_LENGTH = synthesis_length
 		self.PATCH_SIZE = patch_size
 		self.EPSILON = epsilon
@@ -12,13 +13,13 @@ class EfrosLeung:
 		self.TEXTURE_ARRAY = np.array(Image.open(image_path))
 		self.TEXTURE_WIDTH, self.TEXTURE_HEIGHT, _ = np.shape(self.TEXTURE_ARRAY)
 
+	def initialize_synthesized_image(self):
 		# -1 pour ne pas confondre les pixels vides avec les éventuels pixels noirs de la texture
 		self.final_image_array = np.array(
 			Image.new("RGB", [self.SYNTHESIS_LENGTH, self.SYNTHESIS_LENGTH]),
 			dtype=np.int16
 		) - 1
 
-	def initialize_synthesized_image(self):
 		seed_x = randint(0, self.SYNTHESIS_LENGTH - self.TEXTURE_WIDTH - 1)
 		seed_y = randint(0, self.SYNTHESIS_LENGTH - self.TEXTURE_HEIGHT - 1)
 
