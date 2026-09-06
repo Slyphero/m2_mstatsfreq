@@ -99,11 +99,38 @@ class EfrosLeung:
 
 
 	def __find_candidate_coordinates(self):
-		ssd_array = np.array([])
-
+		ssd_array = []
 		for y in range(0, self.TEXTURE_HEIGHT):
 			for x in range(0, self.TEXTURE_WIDTH):
-				pass
+				ssd = np.inf
+				at_least_one_valid = False
+
+				for y_patch in range(0, self.PATCH_SIZE):
+					for x_patch in range(0, self.PATCH_SIZE):
+						if self.patch_mask[y_patch, x_patch] == 1:
+							offset_y = y_patch + y - self.PATCH_SIZE // 2
+							offset_x = x_patch + x - self.PATCH_SIZE // 2
+
+							is_offset_valid = (offset_y >= 0 and offset_y < self.TEXTURE_HEIGHT and
+									offset_x >= 0 and offset_x < self.TEXTURE_WIDTH)
+
+							if is_offset_valid:
+								if not at_least_one_valid:
+									ssd = 0
+									at_least_one_valid = True
+
+								pixel_patch = self.patch[y_patch, x_patch]
+								pixel_source = self.TEXTURE_ARRAY[offset_y, offset_x]
+								ssd += np.sum((pixel_patch - pixel_source) ** 2)
+							else:
+								if ssd == np.inf:
+									ssd = 0
+								ssd += 255 ** 2 * 3
+
+				ssd_array.append(ssd)
+
+		ssd_matrix = np.array(ssd_array).reshape(self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH)
+		print(ssd_matrix)
 
 
 	def fill_synthesized_image(self):
@@ -115,6 +142,7 @@ class EfrosLeung:
 
 		best_index = np.argmax(neighbors_array)
 		self.__set_patch_and_mask(candidates[best_index][0], candidates[best_index][1])
+		self.__find_candidate_coordinates()
 
 
 
