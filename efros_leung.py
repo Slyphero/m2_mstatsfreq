@@ -22,9 +22,8 @@ class EfrosLeung:
 		seed_y = randint(0, self.TEXTURE_HEIGHT - self.SEED_SIZE)
 		seed_x = randint(0, self.TEXTURE_WIDTH - self.SEED_SIZE)
 
-		for i in range(0, self.SEED_SIZE):
-			for j in range(0, self.SEED_SIZE):
-				self.SEED[i, j] = self.TEXTURE_ARRAY[seed_y + i, seed_x + j]
+		self.SEED = self.TEXTURE_ARRAY[seed_y : seed_y + self.SEED_SIZE,
+								       seed_x : seed_x + self.SEED_SIZE]
 		
 
 	def initialize_synthesized_image(self):
