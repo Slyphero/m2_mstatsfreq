@@ -13,8 +13,6 @@ class EfrosLeung:
 		self.SEED = np.array(Image.new("RGB", [self.SEED_SIZE, self.SEED_SIZE]), dtype=np.int16) - 1
 
 		self.PATCH_SIZE = patch_size
-		self.patch = np.array(Image.new("RGB", [self.PATCH_SIZE, self.PATCH_SIZE]), dtype=np.int16) - 1
-		self.patch_mask = np.zeros([self.PATCH_SIZE, self.PATCH_SIZE], dtype=np.int16)
 
 		self.TEXTURE_ARRAY = np.array(Image.open(image_path))
 		self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH, _ = np.shape(self.TEXTURE_ARRAY)
@@ -89,7 +87,7 @@ class EfrosLeung:
 	def __set_patch_and_mask(self, y_best, x_best):
 		self.patch = np.array(Image.new("RGB", [self.PATCH_SIZE, self.PATCH_SIZE]), dtype=np.int16) - 1
 		self.patch_mask = np.zeros([self.PATCH_SIZE, self.PATCH_SIZE], dtype=np.int16)
-		
+
 		for y in range(0, self.PATCH_SIZE):
 			for x in range(0, self.PATCH_SIZE):
 				offset_y = y_best - self.PATCH_SIZE // 2 + y
