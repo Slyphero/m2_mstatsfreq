@@ -39,7 +39,8 @@ class EfrosLeung:
 
 		for i in range(0, self.SEED_SIZE):
 			for j in range(0, self.SEED_SIZE): 
-				self.final_image_array[i + image_center_y - self.SEED_SIZE // 2, j + image_center_x - self.SEED_SIZE // 2] = self.SEED[i, j]
+				self.final_image_array[i + image_center_y - self.SEED_SIZE // 2, 
+						               j + image_center_x - self.SEED_SIZE // 2] = self.SEED[i, j]
 
 
 	def __count_direct_filled_neighbors(self, x, y):
@@ -50,28 +51,35 @@ class EfrosLeung:
 					continue 
 
 				if i >= 0 and j >= 0 and i < self.SYNTHESIS_LENGTH and j < self.SYNTHESIS_LENGTH:
-					if self.final_image_array[i, j] != - 1:
+					if self.final_image_array[i, j, 0] != - 1:
 						neighbors += 1
 		return neighbors
 
-	def __fill_candidates_pixels(self):
-		
-		self.candidates_pixels = []
 
+	def __fill_candidates_pixels(self):
+		candidates_pixels = []
+
+		for y in range(0, self.SYNTHESIS_LENGTH):
+			for x in range(0, self.SYNTHESIS_LENGTH): 
+				if self.__count_direct_filled_neighbors(x, y) > 0 and self.final_image_array[y, x, 0] == -1:
+					candidates_pixels.append((x, y))
+		return candidates_pixels
+	
 
 	def fill_synthesized_image(self):
-		while np.any(self.final_image_array == -1):
-			best_x, best_y = 0, 0
+		print(self.__fill_candidates_pixels())
+		# while np.any(self.final_image_array == -1):
+		# 	best_x, best_y = 0, 0
 
-			for i in range(0, self.SYNTHESIS_LENGTH):
-				for j in range(0, self.SYNTHESIS_LENGTH):
-					neighbors_count = 0
+		# 	for i in range(0, self.SYNTHESIS_LENGTH):
+		# 		for j in range(0, self.SYNTHESIS_LENGTH):
+		# 			neighbors_count = 0
 
-					for k in range(i - self.PATCH_SIZE, i + self.PATCH_SIZE):
-						for l in range(j - self.PATCH_SIZE, j + self.PATCH_SIZE):
-							continue
+		# 			for k in range(i - self.PATCH_SIZE, i + self.PATCH_SIZE):
+		# 				for l in range(j - self.PATCH_SIZE, j + self.PATCH_SIZE):
+		# 					continue
 
-			continue
+		# 	continue
 
 
 	def plot_image(self):
