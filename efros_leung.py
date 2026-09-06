@@ -15,16 +15,19 @@ class EfrosLeung:
 		self.TEXTURE_ARRAY = np.array(Image.open(image_path))
 		self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH, _ = np.shape(self.TEXTURE_ARRAY)
 
-	def sample_example_texture(self):
-		seed_x = randint(0, self.TEXTURE_HEIGHT - self.SEED_SIZE)
-		seed_y = randint(0, self.TEXTURE_WIDTH - self.SEED_SIZE)
+
+	def __sample_example_texture(self):
+		seed_y = randint(0, self.TEXTURE_HEIGHT - self.SEED_SIZE)
+		seed_x = randint(0, self.TEXTURE_WIDTH - self.SEED_SIZE)
 
 		for i in range(0, self.SEED_SIZE):
 			for j in range(0, self.SEED_SIZE):
-				self.SEED[i, j] = self.TEXTURE_ARRAY[seed_x + i, seed_y + j]
+				self.SEED[i, j] = self.TEXTURE_ARRAY[seed_y + i, seed_x + j]
 		
 
 	def initialize_synthesized_image(self):
+		self.__sample_example_texture()
+
 		# -1 pour ne pas confondre les pixels vides avec les éventuels pixels noirs de la texture
 		self.final_image_array = np.array(
 			Image.new("RGB", [self.SYNTHESIS_LENGTH, self.SYNTHESIS_LENGTH]),
@@ -36,7 +39,24 @@ class EfrosLeung:
 
 		for i in range(0, self.SEED_SIZE):
 			for j in range(0, self.SEED_SIZE): 
-				self.final_image_array[i + image_center_x - self.SEED_SIZE // 2, j + image_center_y - self.SEED_SIZE // 2] = self.SEED[i, j]
+				self.final_image_array[i + image_center_y - self.SEED_SIZE // 2, j + image_center_x - self.SEED_SIZE // 2] = self.SEED[i, j]
+
+
+	def __count_direct_filled_neighbors(self, x, y):
+		neighbors = 0
+		for i in range(y - 1, y + 2):
+			for j in range(x - 1, x + 2):
+				if i == y and j == x:
+					continue 
+
+				if i >= 0 and j >= 0 and i < self.SYNTHESIS_LENGTH and j < self.SYNTHESIS_LENGTH:
+					if self.final_image_array[i, j] != - 1:
+						neighbors += 1
+		return neighbors
+
+	def __fill_candidates_pixels(self):
+		
+		self.candidates_pixels = []
 
 
 	def fill_synthesized_image(self):
