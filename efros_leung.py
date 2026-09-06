@@ -4,14 +4,25 @@ import matplotlib.pyplot as plt
 from random import randint
 
 class EfrosLeung:
-	def __init__(self, image_path, synthesis_length, patch_size, epsilon):
+	def __init__(self, image_path, synthesis_length, patch_size, epsilon, seed_size):
 		# Initialisation des paramètres
 		self.SYNTHESIS_LENGTH = synthesis_length
 		self.PATCH_SIZE = patch_size
 		self.EPSILON = epsilon
+		self.SEED_SIZE = seed_size
+		self.SEED = np.array(Image.new("RGB", [self.SEED_SIZE, self.SEED_SIZE]), dtype=np.int16) - 1
 
 		self.TEXTURE_ARRAY = np.array(Image.open(image_path))
-		self.TEXTURE_WIDTH, self.TEXTURE_HEIGHT, _ = np.shape(self.TEXTURE_ARRAY)
+		self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH, _ = np.shape(self.TEXTURE_ARRAY)
+
+	def sample_example_texture(self):
+		seed_x = randint(0, self.TEXTURE_HEIGHT - self.SEED_SIZE)
+		seed_y = randint(0, self.TEXTURE_WIDTH - self.SEED_SIZE)
+
+		for i in range(0, self.SEED_SIZE):
+			for j in range(0, self.SEED_SIZE):
+				self.SEED[i, j] = self.TEXTURE_ARRAY[seed_x + i, seed_y + j]
+		
 
 	def initialize_synthesized_image(self):
 		# -1 pour ne pas confondre les pixels vides avec les éventuels pixels noirs de la texture
@@ -20,16 +31,16 @@ class EfrosLeung:
 			dtype=np.int16
 		) - 1
 
-		seed_x = randint(0, self.SYNTHESIS_LENGTH - self.TEXTURE_WIDTH - 1)
-		seed_y = randint(0, self.SYNTHESIS_LENGTH - self.TEXTURE_HEIGHT - 1)
+		image_center_x = (self.SYNTHESIS_LENGTH - 1) // 2
+		image_center_y = (self.SYNTHESIS_LENGTH - 1) // 2
 
-		# Ajout du sample texture dans l'image finale
-		for i in range(seed_x, seed_x + self.TEXTURE_WIDTH):
-			for j in range(seed_y, seed_y + self.TEXTURE_HEIGHT):
-				self.final_image_array[i, j] = self.TEXTURE_ARRAY[i - seed_x, j - seed_y]
+		for i in range(0, self.SEED_SIZE):
+			for j in range(0, self.SEED_SIZE): 
+				self.final_image_array[i + image_center_x - self.SEED_SIZE // 2, j + image_center_y - self.SEED_SIZE // 2] = self.SEED[i, j]
+
 
 	def fill_synthesized_image(self):
-		while not np.any(self.final_image_array == -1):
+		while np.any(self.final_image_array == -1):
 			best_x, best_y = 0, 0
 
 			for i in range(0, self.SYNTHESIS_LENGTH):
