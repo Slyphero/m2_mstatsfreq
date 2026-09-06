@@ -45,10 +45,7 @@ class EfrosLeung:
 						               j + image_center_x - self.SEED_SIZE // 2] = self.SEED[i, j]
 
 
-	def __count_direct_filled_neighbors(self, x, y):
-		if self.final_image_array[y, x, 0] != -1:
-			return 
-		 
+	def __count_direct_filled_neighbors(self, y, x):
 		neighbors = 0
 		for i in range(y - 1, y + 2):
 			for j in range(x - 1, x + 2):
@@ -66,7 +63,7 @@ class EfrosLeung:
 
 		for y in range(0, self.SYNTHESIS_LENGTH):
 			for x in range(0, self.SYNTHESIS_LENGTH): 
-				if self.__count_direct_filled_neighbors(x, y) > 0 and self.final_image_array[y, x, 0] == -1:
+				if self.__count_direct_filled_neighbors(y, x) > 0 and self.final_image_array[y, x, 0] == -1:
 					candidates_pixels.append((y, x))
 		return candidates_pixels
 
@@ -102,19 +99,22 @@ class EfrosLeung:
 
 
 	def __find_candidate_coordinates(self):
-		pass
+		ssd_array = np.array([])
+
+		for y in range(0, self.TEXTURE_HEIGHT):
+			for x in range(0, self.TEXTURE_WIDTH):
+				pass
 
 
 	def fill_synthesized_image(self):
 		candidates = self.__fill_candidates_pixels()
 
-		while candidates:
-			neighbors_array = []
-			for candidate in candidates:
-				neighbors_array.append(self.__count_filled_neighbors_patch(candidate[0], candidate[1]))
+		neighbors_array = []
+		for candidate in candidates:
+			neighbors_array.append(self.__count_filled_neighbors_patch(candidate[0], candidate[1]))
 
-			best_index = np.argmax(neighbors_array)
-			self.__set_patch_and_mask(candidates[best_index][0], candidates[best_index][1])
+		best_index = np.argmax(neighbors_array)
+		self.__set_patch_and_mask(candidates[best_index][0], candidates[best_index][1])
 
 
 
