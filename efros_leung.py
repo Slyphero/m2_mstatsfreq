@@ -57,15 +57,14 @@ class EfrosLeung:
 
 
 	def __count_filled_neighbors_patch(self, y_candidate, x_candidate):
-		neighbors = 0
-		for y in range(y_candidate - self.PATCH_SIZE // 2, y_candidate + self.PATCH_SIZE // 2 + 1):
-			for x in range(x_candidate - self.PATCH_SIZE // 2, x_candidate + self.PATCH_SIZE // 2 + 1):
-				if y == y_candidate and x == x_candidate:
-					continue 
+		half = self.PATCH_SIZE // 2
 
-				if y >= 0 and x >= 0 and y < self.SYNTHESIS_LENGTH and x < self.SYNTHESIS_LENGTH:
-					if self.final_image_array[y, x, 0] != -1:
-						neighbors += 1
+		patch_area = self.final_image_array[max(0, y_candidate - half) : 
+									        	min(self.SYNTHESIS_LENGTH, y_candidate + half + 1),
+											max(0, x_candidate - half) : 
+												min(self.SYNTHESIS_LENGTH, x_candidate + half + 1)]
+
+		neighbors = np.sum(patch_area[:, :, 0] != -1)
 		return neighbors
 
 
