@@ -62,7 +62,7 @@ class EfrosLeung:
 		for y in range(0, self.SYNTHESIS_LENGTH):
 			for x in range(0, self.SYNTHESIS_LENGTH): 
 				if self.__count_direct_filled_neighbors(x, y) > 0 and self.final_image_array[y, x, 0] == -1:
-					candidates_pixels.append((x, y))
+					candidates_pixels.append((y, x))
 		return candidates_pixels
 	
 
