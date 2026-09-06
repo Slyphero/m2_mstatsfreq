@@ -38,10 +38,11 @@ class EfrosLeung:
 		image_center_x = (self.SYNTHESIS_LENGTH - 1) // 2
 		image_center_y = (self.SYNTHESIS_LENGTH - 1) // 2
 
-		for i in range(0, self.SEED_SIZE):
-			for j in range(0, self.SEED_SIZE): 
-				self.final_image_array[i + image_center_y - self.SEED_SIZE // 2, 
-						               j + image_center_x - self.SEED_SIZE // 2] = self.SEED[i, j]
+		start_x = image_center_x - self.SEED_SIZE // 2
+		start_y = image_center_y - self.SEED_SIZE // 2
+
+		self.final_image_array[start_y : start_y + self.SEED_SIZE,
+						 	   start_x : start_x + self.SEED_SIZE] = self.SEED
 				
 
 	def __fill_candidates_pixels(self):
