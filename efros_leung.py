@@ -130,31 +130,33 @@ class EfrosLeung:
 				ssd_array.append(ssd)
 
 		ssd_matrix = np.array(ssd_array).reshape(self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH)
-		print(ssd_matrix)
 		ssd_min = np.min(ssd_matrix)
 		threshold = ssd_min * (1 + self.EPSILON)
 
 		matching_candidates = np.argwhere(ssd_matrix <= threshold)
 		choice = randint(0, len(matching_candidates) - 1)
-		print(matching_candidates)
 		chosen_y, chosen_x = matching_candidates[choice]
-		print(chosen_y, chosen_x)
+
 		return (chosen_y, chosen_x)
+	
 
 	def fill_synthesized_image(self):
 		candidates = self.__fill_candidates_pixels()
 
-		neighbors_array = []
-		for candidate in candidates:
-			neighbors_array.append(self.__count_filled_neighbors_patch(candidate[0], candidate[1]))
+		while len(candidates) > 0:
+			neighbors_array = []
+			for candidate in candidates:
+				neighbors_array.append(self.__count_filled_neighbors_patch(candidate[0], candidate[1]))
 
-		best_index = np.argmax(neighbors_array)
-		y_best, x_best = candidates[best_index][0], candidates[best_index][1]
-		self.__set_patch_and_mask(y_best, x_best)
+			best_index = np.argmax(neighbors_array)
+			y_best, x_best = candidates[best_index][0], candidates[best_index][1]
+			self.__set_patch_and_mask(y_best, x_best)
 
-		chosen_y, chosen_x = self.__find_candidate_coordinates()
+			chosen_y, chosen_x = self.__find_candidate_coordinates()
 
-		self.final_image_array[y_best, x_best] = self.TEXTURE_ARRAY[chosen_y, chosen_x]
+			self.final_image_array[y_best, x_best] = self.TEXTURE_ARRAY[chosen_y, chosen_x]
+
+			candidates = self.__fill_candidates_pixels()
 
 
 	def plot_image(self):
