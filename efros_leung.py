@@ -64,10 +64,29 @@ class EfrosLeung:
 				if self.__count_direct_filled_neighbors(x, y) > 0 and self.final_image_array[y, x, 0] == -1:
 					candidates_pixels.append((y, x))
 		return candidates_pixels
-	
+
+
+	def __count_filled_neighbors_patch(self, x_candidate, y_candidate):
+		neighbors = 0
+		for y in range(y_candidate - self.PATCH_SIZE // 2, y_candidate + self.PATCH_SIZE // 2 + 1):
+			for x in range(x_candidate - self.PATCH_SIZE // 2, x_candidate + self.PATCH_SIZE // 2 + 1):
+				if y == y_candidate and x == x_candidate:
+					continue 
+
+				if y >= 0 and x >= 0 and y < self.SYNTHESIS_LENGTH and x < self.SYNTHESIS_LENGTH:
+					if self.final_image_array[y, x, 0] != -1:
+						neighbors += 1
+		return neighbors
 
 	def fill_synthesized_image(self):
 		print(self.__fill_candidates_pixels())
+
+		neighbors_array = []
+		for pair in self.__fill_candidates_pixels():
+			neighbors_array.append(self.__count_filled_neighbors_patch(pair[1], pair[0]))
+
+		print(neighbors_array)
+
 		# while np.any(self.final_image_array == -1):
 		# 	best_x, best_y = 0, 0
 
