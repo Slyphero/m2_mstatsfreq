@@ -93,7 +93,8 @@ class EfrosLeung:
 				offset_y = y_best - self.PATCH_SIZE // 2 + y
 				offset_x = x_best - self.PATCH_SIZE // 2 + x
 
-				is_offset_valid = offset_y >= 0 and offset_x >= 0 and offset_y < self.SYNTHESIS_LENGTH and offset_x < self.SYNTHESIS_LENGTH
+				is_offset_valid = (offset_y >= 0 and offset_x >= 0 and 
+					   offset_y < self.SYNTHESIS_LENGTH and offset_x < self.SYNTHESIS_LENGTH)
 
 				if is_offset_valid and self.final_image_array[offset_y, offset_x, 0] != -1:
 					self.patch[y, x] = self.final_image_array[offset_y, offset_x]
