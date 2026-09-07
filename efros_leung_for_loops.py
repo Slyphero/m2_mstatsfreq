@@ -43,28 +43,16 @@ class EfrosLeung:
 			for j in range(0, self.SEED_SIZE): 
 				self.final_image_array[i + image_center_y - self.SEED_SIZE // 2, 
 						               j + image_center_x - self.SEED_SIZE // 2] = self.SEED[i, j]
-
-
-	def __count_direct_filled_neighbors(self, y, x):
-		neighbors = 0
-		for i in range(y - 1, y + 2):
-			for j in range(x - 1, x + 2):
-				if i == y and j == x:
-					continue 
-
-				if i >= 0 and j >= 0 and i < self.SYNTHESIS_LENGTH and j < self.SYNTHESIS_LENGTH:
-					if self.final_image_array[i, j, 0] != - 1:
-						neighbors += 1
-		return neighbors
-
+				
 
 	def __fill_candidates_pixels(self):
 		candidates_pixels = []
 
 		for y in range(0, self.SYNTHESIS_LENGTH):
 			for x in range(0, self.SYNTHESIS_LENGTH): 
-				if self.__count_direct_filled_neighbors(y, x) > 0 and self.final_image_array[y, x, 0] == -1:
-					candidates_pixels.append((y, x))
+				if self.final_image_array[y, x, 0] == -1:
+					if self.__count_filled_neighbors_patch(y, x) > 0:
+						candidates_pixels.append((y, x))
 		return candidates_pixels
 
 
@@ -150,16 +138,22 @@ class EfrosLeung:
 
 			best_index = np.argmax(neighbors_array)
 			y_best, x_best = candidates[best_index][0], candidates[best_index][1]
+
+			candidates.pop(best_index)
 			self.__set_patch_and_mask(y_best, x_best)
 
 			chosen_y, chosen_x = self.__find_candidate_coordinates()
-
 			self.final_image_array[y_best, x_best] = self.TEXTURE_ARRAY[chosen_y, chosen_x]
 
-			candidates = self.__fill_candidates_pixels()
-
+			for i in range(y_best - 1, y_best + 2):
+				for j in range (x_best - 1, x_best + 2):
+					if i == y_best and j == x_best:
+						continue
+					if 0 <= i and i < self.SYNTHESIS_LENGTH and 0 <= j and j < self.SYNTHESIS_LENGTH:
+						if self.final_image_array[i, j, 0] == -1 and (i, j) not in candidates:
+							candidates.append((i, j))
 
 	def plot_image(self):
 		plt.title("Image synthétisée")
-		plt.imshow(self.final_image_array)
+		plt.imshow(self.final_image_array.astype(np.uint8))
 		plt.show()
