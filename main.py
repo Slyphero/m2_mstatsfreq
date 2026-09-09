@@ -1,8 +1,14 @@
 from efros_leung import *
 
+import time 
+
 if __name__ == "__main__":
-	synthesis = EfrosLeung("textures_data/text0.png", 32, 9, 0.1, 3)
+	start = time.time()
+	synthesis = EfrosLeung("textures_data/text0.png", 64, 9, 0.1, 31)
 	synthesis.initialize_synthesized_image()
-	# synthesis.fill_synthesized_image()
+	synthesis.fill_synthesized_image()
+	end = time.time()
+	print(f"Elapsed time : {end - start:.2f} seconds")
 	synthesis.plot_image()
+	
 

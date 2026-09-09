@@ -86,37 +86,21 @@ class EfrosLeung:
 
 
 	def __find_candidate_coordinates(self):
-		ssd_array = []
-		for y in range(0, self.TEXTURE_HEIGHT):
-			for x in range(0, self.TEXTURE_WIDTH):
-				ssd = np.inf
-				at_least_one_valid = False
+		half = self.PATCH_SIZE // 2
+		y_range = self.TEXTURE_HEIGHT - self.PATCH_SIZE + 1
+		x_range = self.TEXTURE_WIDTH - self.PATCH_SIZE + 1
+		
+		ssd_matrix = np.full((self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH), np.inf)
 
-				for y_patch in range(0, self.PATCH_SIZE):
-					for x_patch in range(0, self.PATCH_SIZE):
-						if self.patch_mask[y_patch, x_patch] == 1:
-							offset_y = y_patch + y - self.PATCH_SIZE // 2
-							offset_x = x_patch + x - self.PATCH_SIZE // 2
+		mask_3d = self.patch_mask[:, :, np.newaxis]
+		patch_3d = self.patch.astype(np.int32)
 
-							is_offset_valid = (offset_y >= 0 and offset_y < self.TEXTURE_HEIGHT and
-									offset_x >= 0 and offset_x < self.TEXTURE_WIDTH)
+		for y in range(0, y_range):
+			for x in range(0, x_range):
+				bloc_source = self.TEXTURE_ARRAY[y : y + self.PATCH_SIZE, x : x + self.PATCH_SIZE].astype(np.int32)				
+				diff_masquee = (bloc_source - patch_3d) * mask_3d
+				ssd_matrix[y + half, x + half] = np.sum(diff_masquee ** 2)
 
-							if is_offset_valid:
-								if not at_least_one_valid:
-									ssd = 0
-									at_least_one_valid = True
-
-								pixel_patch = self.patch[y_patch, x_patch].astype(np.int32)
-								pixel_source = self.TEXTURE_ARRAY[offset_y, offset_x].astype(np.int32)
-								ssd += np.sum((pixel_patch - pixel_source) ** 2)
-							else:
-								if ssd == np.inf:
-									ssd = 0
-								ssd += 255 ** 2 * 3
-
-				ssd_array.append(ssd)
-
-		ssd_matrix = np.array(ssd_array).reshape(self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH)
 		ssd_min = np.min(ssd_matrix)
 		threshold = ssd_min * (1 + self.EPSILON)
 
