@@ -163,7 +163,12 @@ class EfrosLeung:
 
 			count += 1
 
-	def plot_image(self):
+
+	def plot_images(self):
+		plt.subplot(1, 2, 1)
+		plt.title("Image source")
+		plt.imshow(self.TEXTURE_ARRAY.astype(np.uint8))
+		plt.subplot(1, 2, 2)
 		plt.title("Image synthétisée")
 		plt.imshow(self.final_image_array.astype(np.uint8))
 		plt.show()
