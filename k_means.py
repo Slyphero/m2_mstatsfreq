@@ -3,33 +3,28 @@ import matplotlib.pyplot as plt
 import random
 
 class KMeans:
-	def __init__(self, points_list, number_of_classes):
-		self.points_list = np.array(points_list)
-		self.number_of_classes = number_of_classes
+	def __init__(self, points_list, number_of_classes, epsilon, max_iterations):
+		self.POINTS_LIST = np.array(points_list)
+		self.EPSILON = epsilon
+		self.NUMBER_OF_CLASSES = number_of_classes
+		self.MAX_ITERATIONS = max_iterations
 		self.DATA_2D = np.loadtxt("classif_data/gmm2d.asc")
 		self.DATA_3D = np.loadtxt("classif_data/gmm3d.asc")
-		self.centers = np.empty((number_of_classes, self.points_list.shape[1]))
-		self.colors = []
+		self.centers = np.empty((number_of_classes, self.POINTS_LIST.shape[1]))
+		self.COLORS = [ (random.random(), random.random(), random.random())
+			            for _ in range(self.NUMBER_OF_CLASSES) ]
 		self.labels = []
 
 
 	def compute(self):
-		number_of_points = len(self.points_list)
-		picked = set()
+		number_of_points = len(self.POINTS_LIST)
 
 		# Sélection aléatoire des centres pour l'initialisation
-		for i in range(self.number_of_classes):
-			while True:
-				random_index = random.randint(0, number_of_points - 1)
-				if random_index not in picked:
-					break
-			self.centers[i] = self.points_list[random_index]
-
-		self.colors = [ (random.random(), random.random(), random.random())
-			            for _ in range(self.number_of_classes) ]
+		indices = np.random.choice(number_of_points, self.NUMBER_OF_CLASSES, replace=False)
+		self.centers = self.POINTS_LIST[indices]
 
 		# Première itération
-		distances = np.linalg.norm(self.points_list[:, np.newaxis] - self.centers, axis=2)
+		distances = np.sum((self.POINTS_LIST[:, np.newaxis] - self.centers) ** 2, axis=2)
 		self.labels = np.argmin(distances, axis=1)
 
 		self.centers = np.array(self.centers)
@@ -40,26 +35,27 @@ class KMeans:
 
 		# Boucle jusqu'à convergence
 		# Critère de convergence : Si les barycentres à l'étape i - 1  sont suffisamment proches de ceux à l'étape i
-		EPSILON = 0.0001
-		while True:
+		iterations = 0
+		while True and iterations < self.MAX_ITERATIONS:
 			old_centers = self.centers.copy()
-			for i in range(self.number_of_classes):
+			for i in range(self.NUMBER_OF_CLASSES):
 				mask = (self.labels == i)
 				if np.any(mask):
-					self.centers[i] = np.mean(self.points_list[mask], axis=0)
+					self.centers[i] = np.mean(self.POINTS_LIST[mask], axis=0)
 
-			distances = np.linalg.norm(self.points_list[:, np.newaxis] - self.centers, axis=2)
+			distances = np.sum((self.POINTS_LIST[:, np.newaxis] - self.centers) ** 2, axis=2)
 			self.labels = np.argmin(distances, axis=1)
 
-			if np.all(np.abs(self.centers - old_centers) < EPSILON):
+			if np.all(np.abs(self.centers - old_centers) < self.EPSILON):
 				break
+			iterations += 1
 
 
 	def plot_2d(self):
 		fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 		# Itération 1
-		ax1.scatter(self.points_list[:, 0], self.points_list[:, 1],
-                    c=[self.colors[label] for label in self.initial_labels],
+		ax1.scatter(self.POINTS_LIST[:, 0], self.POINTS_LIST[:, 1],
+                    c=[self.COLORS[label] for label in self.initial_labels],
 	                marker="x", s=10)
 		ax1.scatter(self.initial_centers[:, 0], self.initial_centers[:, 1],
 	                c="red", marker="o", s=30)
@@ -67,8 +63,8 @@ class KMeans:
 		ax1.axis('equal')
 
 	    # Convergence
-		ax2.scatter(self.points_list[:, 0], self.points_list[:, 1],
-	                c=[self.colors[label] for label in self.labels],
+		ax2.scatter(self.POINTS_LIST[:, 0], self.POINTS_LIST[:, 1],
+	                c=[self.COLORS[label] for label in self.labels],
 	                marker="x", s=10)
 		ax2.scatter(self.centers[:, 0], self.centers[:, 1],
 	                c="red", marker="o", s=30)
@@ -80,13 +76,24 @@ class KMeans:
 
 
 	def plot_3d(self):
-		fig = plt.figure()
-		ax = fig.add_subplot(111, projection='3d')
-		ax.scatter(self.DATA_3D[:, 0], self.DATA_3D[:, 1], self.DATA_3D[:, 2],
-	               c=[self.colors[label] for label in self.labels],
-	               marker="x", s=10)
-		ax.scatter(self.DATA_3D[self.centers_indices, 0],
-	               self.DATA_3D[self.centers_indices, 1],
-	               self.DATA_3D[self.centers_indices, 2],
-	               c="red", marker="o", s=40)
+		fig = plt.figure(figsize=(14, 6))
+		# Itération 1
+		ax1 = fig.add_subplot(1, 2, 1, projection='3d')
+		ax1.scatter(self.POINTS_LIST[:, 0], self.POINTS_LIST[:, 1], self.POINTS_LIST[:, 2],
+                    c=[self.COLORS[label] for label in self.initial_labels],
+                    marker="x", s=10)
+		ax1.scatter(self.initial_centers[:, 0], self.initial_centers[:, 1], self.initial_centers[:, 2],
+			        c="red", marker="o", s=40)
+		ax1.set_title("Initialisation")
+
+		# Convergence
+		ax2 = fig.add_subplot(1, 2, 2, projection='3d')
+		ax2.scatter(self.POINTS_LIST[:, 0], self.POINTS_LIST[:, 1], self.POINTS_LIST[:, 2],
+                    c=[self.COLORS[label] for label in self.labels],
+                    marker="x", s=10)
+		ax2.scatter(self.centers[:, 0], self.centers[:, 1], self.centers[:, 2],
+                    c="red", marker="o", s=40)
+		ax2.set_title("Convergence")
+
+		plt.tight_layout()
 		plt.show()
