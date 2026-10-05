@@ -18,6 +18,8 @@ if __name__ == "__main__":
 	synthesis.plot_images()
 	"""
 
-	means = KMeans()
-	means.compute(means.DATA_3D, 5)
-	means.plot_3d()
+	means = KMeans(points_list=np.loadtxt("classif_data/gmm2d.asc"),
+		           number_of_classes=5)
+
+	means.compute()
+	means.plot_2d()

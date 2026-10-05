@@ -3,33 +3,53 @@ import matplotlib.pyplot as plt
 import random
 
 class KMeans:
-	def __init__(self):
+	def __init__(self, points_list, number_of_classes):
+		self.points_list = np.array(points_list)
+		self.number_of_classes = number_of_classes
 		self.DATA_2D = np.loadtxt("classif_data/gmm2d.asc")
 		self.DATA_3D = np.loadtxt("classif_data/gmm3d.asc")
+		self.centers = []
 		self.centers_indices = []
 		self.colors = []
 		self.labels = []
 
-	def compute(self, points_list, number_of_classes):
-		number_of_points = len(points_list)
 
-		for _ in range(number_of_classes):
-			random_index = random.randint(0, number_of_points)
+	def compute(self):
+		number_of_points = len(self.points_list)
+
+		# Sélection aléatoire des centres pour l'initialisation
+		for _ in range(self.number_of_classes):
+			random_index = random.randint(0, number_of_points - 1)
 			while random_index in self.centers_indices:
-				random_index = random.randint(0, number_of_points)
+				random_index = random.randint(0, number_of_points - 1)
 			self.centers_indices.append(random_index)
+			self.centers.append(self.points_list[random_index])
 
-		self.colors = [(random.random(), random.random(), random.random()) for _ in range(number_of_classes)]
+		self.colors = [ (random.random(), random.random(), random.random())
+			            for _ in range(self.number_of_classes) ]
 
-		for i in range(number_of_points):
-			min_label = 0
-			min_distance = np.linalg.norm(points_list[i] - points_list[self.centers_indices[min_label]]) ** 2
-			for j in range(number_of_classes):
-				distance = np.linalg.norm(points_list[i] - points_list[self.centers_indices[j]]) ** 2
-				if distance < min_distance:
-					min_distance = distance
-					min_label = j
-			self.labels.append(min_label)
+		# Première itération
+		distances = np.linalg.norm(self.points_list[:, np.newaxis] - self.centers, axis=2)
+		self.labels = np.argmin(distances, axis=1)
+
+		self.centers = np.array(self.centers)
+		self.labels = np.array(self.labels)
+
+		# Boucle jusqu'à convergence
+		# Critère de convergence : Si les barycentres à l'étape i - 1  sont suffisamment proches de ceux à l'étape i
+		EPSILON = 0.0001
+		while True:
+			old_centers = self.centers.copy()
+			for i in range(self.number_of_classes):
+				mask = (self.labels == i)
+				if np.any(mask):
+					self.centers[i] = np.mean(self.points_list[mask], axis=0)
+
+			distances = np.linalg.norm(self.points_list[:, np.newaxis] - self.centers, axis=2)
+			self.labels = np.argmin(distances, axis=1)
+
+			if np.all(np.abs(self.centers - old_centers) < EPSILON):
+				break
 
 	def plot_2d(self):
 		plt.scatter(self.DATA_2D[:, 0], self.DATA_2D[:, 1],
@@ -42,6 +62,7 @@ class KMeans:
 
 		plt.axis('equal')
 		plt.show()
+
 
 	def plot_3d(self):
 		fig = plt.figure()
