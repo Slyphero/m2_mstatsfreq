@@ -19,5 +19,5 @@ if __name__ == "__main__":
 	"""
 
 	means = KMeans()
-	means.compute(means.DATA_2D, 5)
-	means.plot_2d()
+	means.compute(means.DATA_3D, 5)
+	means.plot_3d()

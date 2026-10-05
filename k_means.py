@@ -19,9 +19,7 @@ class KMeans:
 				random_index = random.randint(0, number_of_points)
 			self.centers_indices.append(random_index)
 
-		print("centers_indices:", self.centers_indices)
 		self.colors = [(random.random(), random.random(), random.random()) for _ in range(number_of_classes)]
-		print("colors:", self.colors)
 
 		for i in range(number_of_points):
 			min_label = 0
@@ -36,7 +34,7 @@ class KMeans:
 	def plot_2d(self):
 		plt.scatter(self.DATA_2D[:, 0], self.DATA_2D[:, 1],
                     c=[self.colors[label] for label in self.labels],
-                    marker="x", s=5)
+                    marker="x", s=10)
 
 		plt.scatter(self.DATA_2D[self.centers_indices, 0],
    				    self.DATA_2D[self.centers_indices, 1],
@@ -46,4 +44,13 @@ class KMeans:
 		plt.show()
 
 	def plot_3d(self):
-		pass
+		fig = plt.figure()
+		ax = fig.add_subplot(111, projection='3d')
+		ax.scatter(self.DATA_3D[:, 0], self.DATA_3D[:, 1], self.DATA_3D[:, 2],
+	               c=[self.colors[label] for label in self.labels],
+	               marker="x", s=10)
+		ax.scatter(self.DATA_3D[self.centers_indices, 0],
+	               self.DATA_3D[self.centers_indices, 1],
+	               self.DATA_3D[self.centers_indices, 2],
+	               c="red", marker="o", s=40)
+		plt.show()
