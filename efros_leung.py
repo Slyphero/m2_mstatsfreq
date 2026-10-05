@@ -17,7 +17,7 @@ class EfrosLeung:
 		# Initialisation des paramètres
 		self.SYNTHESIS_LENGTH = synthesis_length
 		self.EPSILON = epsilon
-		
+
 		self.SEED_SIZE = seed_size
 		self.SEED = np.array(Image.new("RGB", [self.SEED_SIZE, self.SEED_SIZE]), dtype=np.int16) - 1
 
@@ -36,7 +36,7 @@ class EfrosLeung:
 
 		self.SEED = self.TEXTURE_ARRAY[seed_y : seed_y + self.SEED_SIZE,
 								       seed_x : seed_x + self.SEED_SIZE]
-		
+
 
 	def initialize_synthesized_image(self):
 		"""
@@ -59,7 +59,7 @@ class EfrosLeung:
 
 		self.final_image_array[start_y : start_y + self.SEED_SIZE,
 						 	   start_x : start_x + self.SEED_SIZE] = self.SEED
-				
+
 
 	def __fill_candidates_pixels(self):
 		"""
@@ -69,7 +69,7 @@ class EfrosLeung:
 		candidates_pixels = []
 
 		for y in range(0, self.SYNTHESIS_LENGTH):
-			for x in range(0, self.SYNTHESIS_LENGTH): 
+			for x in range(0, self.SYNTHESIS_LENGTH):
 				if self.final_image_array[y, x, 0] == -1:
 					if self.__count_filled_neighbors_patch(y, x) > 0:
 						candidates_pixels.append((y, x))
@@ -85,9 +85,9 @@ class EfrosLeung:
 		"""
 		half = self.PATCH_SIZE // 2
 
-		patch_area = self.final_image_array[max(0, y_candidate - half) : 
+		patch_area = self.final_image_array[max(0, y_candidate - half) :
 									        	min(self.SYNTHESIS_LENGTH, y_candidate + half + 1),
-											max(0, x_candidate - half) : 
+											max(0, x_candidate - half) :
 												min(self.SYNTHESIS_LENGTH, x_candidate + half + 1)]
 
 		neighbors = np.sum(patch_area[:, :, 0] != -1)
@@ -109,7 +109,7 @@ class EfrosLeung:
 				offset_y = y_best - self.PATCH_SIZE // 2 + y
 				offset_x = x_best - self.PATCH_SIZE // 2 + x
 
-				is_offset_valid = (offset_y >= 0 and offset_x >= 0 and 
+				is_offset_valid = (offset_y >= 0 and offset_x >= 0 and
 					   offset_y < self.SYNTHESIS_LENGTH and offset_x < self.SYNTHESIS_LENGTH)
 
 				if is_offset_valid and self.final_image_array[offset_y, offset_x, 0] != -1:
@@ -125,7 +125,7 @@ class EfrosLeung:
 		half = self.PATCH_SIZE // 2
 		y_range = self.TEXTURE_HEIGHT - self.PATCH_SIZE + 1
 		x_range = self.TEXTURE_WIDTH - self.PATCH_SIZE + 1
-		
+
 		ssd_matrix = np.full((self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH), np.inf)
 
 		mask_3d = self.patch_mask[:, :, np.newaxis]
@@ -133,7 +133,7 @@ class EfrosLeung:
 
 		for y in range(0, y_range):
 			for x in range(0, x_range):
-				bloc_source = self.TEXTURE_ARRAY[y : y + self.PATCH_SIZE, x : x + self.PATCH_SIZE].astype(np.int32)				
+				bloc_source = self.TEXTURE_ARRAY[y : y + self.PATCH_SIZE, x : x + self.PATCH_SIZE].astype(np.int32)
 				diff_masquee = (bloc_source - patch_3d) * mask_3d
 				ssd_matrix[y + half, x + half] = np.sum(diff_masquee ** 2)
 
@@ -145,7 +145,7 @@ class EfrosLeung:
 		chosen_y, chosen_x = matching_candidates[choice]
 
 		return (chosen_y, chosen_x)
-	
+
 
 	def fill_synthesized_image(self):
 		"""
