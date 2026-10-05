@@ -8,22 +8,22 @@ class KMeans:
 		self.number_of_classes = number_of_classes
 		self.DATA_2D = np.loadtxt("classif_data/gmm2d.asc")
 		self.DATA_3D = np.loadtxt("classif_data/gmm3d.asc")
-		self.centers = []
-		self.centers_indices = []
+		self.centers = np.empty((number_of_classes, self.points_list.shape[1]))
 		self.colors = []
 		self.labels = []
 
 
 	def compute(self):
 		number_of_points = len(self.points_list)
+		picked = set()
 
 		# Sélection aléatoire des centres pour l'initialisation
-		for _ in range(self.number_of_classes):
-			random_index = random.randint(0, number_of_points - 1)
-			while random_index in self.centers_indices:
+		for i in range(self.number_of_classes):
+			while True:
 				random_index = random.randint(0, number_of_points - 1)
-			self.centers_indices.append(random_index)
-			self.centers.append(self.points_list[random_index])
+				if random_index not in picked:
+					break
+			self.centers[i] = self.points_list[random_index]
 
 		self.colors = [ (random.random(), random.random(), random.random())
 			            for _ in range(self.number_of_classes) ]
@@ -34,6 +34,9 @@ class KMeans:
 
 		self.centers = np.array(self.centers)
 		self.labels = np.array(self.labels)
+
+		self.initial_labels = self.labels.copy()
+		self.initial_centers = self.centers.copy()
 
 		# Boucle jusqu'à convergence
 		# Critère de convergence : Si les barycentres à l'étape i - 1  sont suffisamment proches de ceux à l'étape i
@@ -51,16 +54,28 @@ class KMeans:
 			if np.all(np.abs(self.centers - old_centers) < EPSILON):
 				break
 
+
 	def plot_2d(self):
-		plt.scatter(self.DATA_2D[:, 0], self.DATA_2D[:, 1],
-                    c=[self.colors[label] for label in self.labels],
-                    marker="x", s=10)
+		fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+		# Itération 1
+		ax1.scatter(self.points_list[:, 0], self.points_list[:, 1],
+                    c=[self.colors[label] for label in self.initial_labels],
+	                marker="x", s=10)
+		ax1.scatter(self.initial_centers[:, 0], self.initial_centers[:, 1],
+	                c="red", marker="o", s=30)
+		ax1.set_title("Initialisation")
+		ax1.axis('equal')
 
-		plt.scatter(self.DATA_2D[self.centers_indices, 0],
-   				    self.DATA_2D[self.centers_indices, 1],
-        			c="red", marker="o", s=30)
+	    # Convergence
+		ax2.scatter(self.points_list[:, 0], self.points_list[:, 1],
+	                c=[self.colors[label] for label in self.labels],
+	                marker="x", s=10)
+		ax2.scatter(self.centers[:, 0], self.centers[:, 1],
+	                c="red", marker="o", s=30)
+		ax2.set_title("Convergence")
+		ax2.axis('equal')
 
-		plt.axis('equal')
+		plt.tight_layout()
 		plt.show()
 
 
