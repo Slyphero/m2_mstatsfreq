@@ -87,7 +87,7 @@ class KMeans:
 		xr = x * np.cos(orientation) + y * np.sin(orientation)
 		yr = x * np.sin(orientation) - y * np.cos(orientation)
 
-		G = np.exp((xr ** 2 + yr ** 2) / (2 * localization ** 2)) * np.cos(2 * np.pi * frequency * xr / localization)
+		G = np.exp(-(xr ** 2 + yr ** 2) / (2 * localization ** 2)) * np.cos(2 * np.pi * frequency * xr / localization)
 
 		return G
 
