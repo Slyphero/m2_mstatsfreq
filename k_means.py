@@ -1,3 +1,4 @@
+from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 import random
@@ -8,8 +9,6 @@ class KMeans:
 		self.EPSILON = epsilon
 		self.NUMBER_OF_CLASSES = number_of_classes
 		self.MAX_ITERATIONS = max_iterations
-		self.DATA_2D = np.loadtxt("classif_data/gmm2d.asc")
-		self.DATA_3D = np.loadtxt("classif_data/gmm3d.asc")
 		self.centers = np.empty((number_of_classes, self.POINTS_LIST.shape[1]))
 		self.COLORS = [ (random.random(), random.random(), random.random())
 			            for _ in range(self.NUMBER_OF_CLASSES) ]
@@ -49,6 +48,48 @@ class KMeans:
 			if np.all(np.abs(self.centers - old_centers) < self.EPSILON):
 				break
 			iterations += 1
+
+
+	def predict(self, points):
+		points = np.array(points)
+		d = np.sum((points[:, np.newaxis] - self.centers) ** 2, axis=2)
+		return np.argmin(d, axis=1)
+
+
+	def map_clusters_to_classes(self, true_labels):
+		mapping = {}
+		for k in range(self.NUMBER_OF_CLASSES):
+			members = true_labels[self.labels == k]
+			mapping[k] = np.bincount(members).argmax() if len(members) else -1
+		return mapping
+
+
+	def divide_in_patches(self, image_path, patch_size):
+		image = np.array(Image.open(image_path).convert("L"))
+		height, width = image.shape
+		patches = []
+		for y in range(0, height - patch_size + 1, patch_size):
+			for x in range(0, width - patch_size + 1, patch_size):
+				patches.append(image[y : y + patch_size, x : x + patch_size])
+		return patches
+
+
+	def gabor(filter_size, orientation, localization, frequency):
+		"""
+		:param filter_size taille du noyau
+		:param orientation (theta)
+		:param localization (sigma)
+		:param frequency (lambda)
+		"""
+		radius = filter_size // 2
+		y, x = np.mgrid[-radius : radius + 1, -radius : radius + 1]
+
+		xr = x * np.cos(orientation) + y * np.sin(orientation)
+		yr = x * np.sin(orientation) - y * np.cos(orientation)
+
+		G = np.exp((xr ** 2 + yr ** 2) / (2 * localization ** 2)) * np.cos(2 * np.pi * frequency * xr / localization)
+
+		return G
 
 
 	def plot_2d(self):
