@@ -2,6 +2,7 @@ from k_means import *
 
 
 import numpy as np
+import matplotlib.pyplot as plt
 import time
 
 PATCH_SIZE = 32
@@ -13,8 +14,20 @@ FILTERS = [
     for theta in np.arange(4) * np.pi / 4
 ]
 
+# On remarque que la classification manque de précision lorsqu'on l'applique sur des textures non homogènes
+TEXTURES = [
+    # Textures plus homogènes
+    "classif_data/D1.gif",
+    "classif_data/D3.gif",
+    "classif_data/D4.gif",
 
-TEXTURES = ["classif_data/D1.gif", "classif_data/D2.gif", "classif_data/D3.gif"]
+    # Textures moins homogènes
+    "classif_data/D2.gif",
+    "classif_data/D30.gif",
+    "classif_data/D45.gif"
+]
+number_of_textures = len(TEXTURES)
+
 
 if __name__ == "__main__":
     points_DO = []
@@ -48,7 +61,7 @@ if __name__ == "__main__":
 
     means = KMeans(
         points_list=points_DO,
-        number_of_classes=len(TEXTURES),
+        number_of_classes=number_of_textures,
         epsilon=0.0005,
         max_iterations=100,
     )
@@ -64,11 +77,36 @@ if __name__ == "__main__":
     print("DO :", rate(points_DO, labels_DO))
     print("DT :", rate(points_DT, labels_DT))
 
-    patch = patches[0]
-    fig, axes = plt.subplots(3, 5, figsize=(12, 7))
-    axes[0, 0].imshow(patch, cmap="gray")
-    axes[0, 0].set_title("patch")
-    for ax, kernel in zip(axes.ravel()[1:], FILTERS):
-        ax.imshow(np.abs(convolve(patch.astype(float), kernel)), cmap="gray")
+    pred = np.array([mapping[k] for k in means.predict(points_DT)])
+    conf = np.zeros((number_of_textures, number_of_textures), dtype=int)
+    for valid, p in zip(labels_DT, pred):
+        conf[valid, p] += 1
+
+    def plot_confusion(conf):
+        fig, ax = plt.subplots(figsize=(5, 4))
+        im = ax.imshow(conf, cmap="Blues")
+        fig.colorbar(im, ax=ax)
+
+        ax.set_xticks(range(number_of_textures))
+        ax.set_yticks(range(number_of_textures))
+        ax.set_xticklabels([x.replace("classif_data/", "") for x in TEXTURES])
+        ax.set_yticklabels([x.replace("classif_data/", "") for x in TEXTURES])
+        ax.set_xlabel("Texture prédite")
+        ax.set_ylabel("Vraie texture")
+        ax.set_title("Matrice de confusion (DT)")
+
+        threshold = conf.max() / 2
+        for i in range(conf.shape[0]):
+            for j in range(conf.shape[1]):
+                color = "white" if conf[i, j] > threshold else "black"
+                ax.text(j, i, conf[i, j], ha="center", va="center", color=color)
+
+        plt.tight_layout()
+
+    plot_confusion(conf)
+
+    fig, axes = plt.subplots(3, 4, figsize=(10, 8))
+    for ax, kernel in zip(axes.ravel(), FILTERS):
+        ax.imshow(kernel, cmap="gray")
         ax.axis("off")
     plt.show()
