@@ -1,7 +1,10 @@
 from PIL import Image
+
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+
+
 
 
 class KMeans:
@@ -27,6 +30,7 @@ class KMeans:
             for _ in range(self.NUMBER_OF_CLASSES)
         ]
         self.labels = []
+
 
     def compute(self):
         """
@@ -83,41 +87,6 @@ class KMeans:
             members = true_labels[self.labels == k]
             mapping[k] = np.bincount(members).argmax() if len(members) else -1
         return mapping
-
-    def divide_in_patches(self, image_path, patch_size):
-        """
-        Fonction de découpage de l'image passée en paramètre en patches
-        de taille patch_size * patch_size
-
-        :param image_path : Chemin de l'image qu'on souhaite découper
-        :param patch_size : Taille de chaque patch
-        """
-        image = np.array(Image.open(image_path).convert("L"))
-        height, width = image.shape
-        patches = []
-        for y in range(0, height - patch_size + 1, patch_size):
-            for x in range(0, width - patch_size + 1, patch_size):
-                patches.append(image[y : y + patch_size, x : x + patch_size])
-        return patches
-
-    def gabor(self, filter_size, orientation, localization, frequency):
-        """
-        :param filter_size taille du noyau
-        :param orientation (theta)
-        :param localization (sigma)
-        :param frequency (lambda)
-        """
-        radius = filter_size // 2
-        y, x = np.mgrid[-radius : radius + 1, -radius : radius + 1]
-
-        xr = x * np.cos(orientation) + y * np.sin(orientation)
-        yr = x * np.sin(orientation) - y * np.cos(orientation)
-
-        G = np.exp(-(xr**2 + yr**2) / (2 * localization**2)) * np.cos(
-            2 * np.pi * frequency * xr / localization
-        )
-
-        return G
 
     def plot_2d(self):
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
@@ -198,3 +167,71 @@ class KMeans:
 
         plt.tight_layout()
         plt.show()
+
+
+def divide_in_patches(image_path, patch_size):
+    """
+    Fonction de découpage de l'image passée en paramètre en patches
+    de taille patch_size * patch_size
+
+    :param image_path : Chemin de l'image qu'on souhaite découper
+    :param patch_size : Taille de chaque patch
+    """
+    image = np.array(Image.open(image_path).convert("L"))
+    height, width = image.shape
+    patches = []
+    for y in range(0, height - patch_size + 1, patch_size):
+        for x in range(0, width - patch_size + 1, patch_size):
+            patches.append(image[y : y + patch_size, x : x + patch_size])
+    return patches
+
+
+def gabor(filter_size, orientation, localization, frequency):
+    """
+    :param filter_size taille du noyau
+    :param orientation (theta)
+    :param localization (sigma)
+    :param frequency (lambda)
+    """
+    radius = filter_size // 2
+    y, x = np.mgrid[-radius : radius + 1, -radius : radius + 1]
+
+    xr = x * np.cos(orientation) + y * np.sin(orientation)
+    yr = x * np.sin(orientation) - y * np.cos(orientation)
+
+    G = np.exp(-(xr**2 + yr**2) / (2 * localization**2)) * np.cos(
+        2 * np.pi * frequency * xr / localization
+    )
+
+    return G
+
+
+def convolve(patch, kernel):
+    """
+    :param patch patch à convoluer
+    :param kernel noyau de convolution
+    """
+    height, width = patch.shape
+    kernel_size = kernel.shape[0]
+    radius = kernel_size // 2
+
+    # Si jamais le patch dépasse des bords, on réutilse les pixels des bords
+    padded = np.pad(patch, radius, mode="reflect")
+
+    out = np.zeros((height, width))
+
+    for y in range(height):
+        for x in range(width):
+            zone = padded[y : y + 2 * radius + 1, x : x + 2 * radius + 1]
+            out[y, x] = np.sum(zone * kernel)
+
+    return out
+
+
+def describe(patch, filters):
+    patch = patch.astype(float)
+    features = []
+    for kernel in filters:
+        response = np.abs(convolve(patch, kernel))
+        features += [response.mean(), response.std()]
+    return np.array(features)
