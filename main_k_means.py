@@ -1,5 +1,5 @@
 from k_means import *
-
+from efros_leung import EfrosLeung
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,13 +18,10 @@ FILTERS = [
 TEXTURES = [
     # Textures plus homogènes
     "classif_data/D1.gif",
-    "classif_data/D3.gif",
     "classif_data/D4.gif",
-
     # Textures moins homogènes
     "classif_data/D2.gif",
-    "classif_data/D30.gif",
-    "classif_data/D45.gif"
+    "classif_data/D45.gif",
 ]
 number_of_textures = len(TEXTURES)
 
@@ -35,10 +32,15 @@ if __name__ == "__main__":
     points_DT = []
     labels_DT = []
 
+    # Permettant de conserver les patches bruts de DT pour la synthèse
+    raw_DT = {}
+
     for num, path in enumerate(TEXTURES):
         patches = divide_in_patches(path, PATCH_SIZE)
         np.random.shuffle(patches)
         half = len(patches) // 2
+
+        raw_DT[num] = patches[half:]
 
         for p in patches[:half]:
             points_DO.append(describe(p, FILTERS))
@@ -77,11 +79,70 @@ if __name__ == "__main__":
     print("DO :", rate(points_DO, labels_DO))
     print("DT :", rate(points_DT, labels_DT))
 
+    def classify_array(image, true_label):
+        patches = divide_array_in_patches(image, PATCH_SIZE)
+        pts = (np.array([describe(p, FILTERS) for p in patches]) - mu) / sd
+        pred = np.array([mapping[k] for k in means.predict(pts)])
+        return np.sum(pred == true_label), len(pred)
+
+    SYNTH_SIZE = 64
+    N_IMAGES = 3
+
+
+    # On cumule plusieurs images par texture pour éviter de se baser sur un trop faible nombre de patch
+    for num in range(number_of_textures):
+        ok, total = 0, 0
+        ok_n, total_n = 0, 0
+        ok_b, total_b = 0, 0
+
+        for k in range(N_IMAGES):
+            source = mosaic(raw_DT[num][k * 9 : (k + 1) * 9])
+            synth = EfrosLeung(None, SYNTH_SIZE, 9, 0.1, 15, image_array=source)
+            synth.initialize_synthesized_image()
+            synth.fill_synthesized_image()
+            gray = synth.get_gray_image()
+            Image.fromarray(gray).save(f"IMAGES_MSTATS/K_MEANS/synth_{num}_{k}.png")
+
+            o, t = classify_array(gray, num)
+            ok += o
+            total += t
+
+            o, t = classify_array(add_noise(gray, 20), num)
+            ok_n += o
+            total_n += t
+
+            o, t = classify_array(blur(gray, 3), num)
+            ok_b += o
+            total_b += t
+
+        print(f"{TEXTURES[num]:25s} {ok/total:.2f}  {ok_n/total_n:.2f}  {ok_b/total_b:.2f}")
+
+    def rate_degraded(degrade, param):
+        ok, total = 0, 0
+        for num in range(number_of_textures):
+            # Limitation à 20 patches par texture, itérations coûteuses
+            for p in raw_DT[num][:20]:
+                q = degrade(p, param)
+                pt = (describe(q, FILTERS) - mu) / sd
+                pred = mapping[means.predict(pt[np.newaxis, :])[0]]
+                ok += pred == num
+                total += 1
+        return ok / total
+
+    print("Sigma | Taux réussite bruité")
+    for s in (0, 5, 10, 20, 40):
+        print(f"bruit {s} {rate_degraded(add_noise, s):.2f}")
+
+    print("Taille noyau | Taux réussite flouté")
+    for k in (1, 3, 5, 7):
+        print(f"flou {k} {rate_degraded(blur, k):.2f}")
+
     pred = np.array([mapping[k] for k in means.predict(points_DT)])
     conf = np.zeros((number_of_textures, number_of_textures), dtype=int)
     for valid, p in zip(labels_DT, pred):
         conf[valid, p] += 1
 
+    # Diagonale principale : nombre de bonnes prédictions
     def plot_confusion(conf):
         fig, ax = plt.subplots(figsize=(5, 4))
         im = ax.imshow(conf, cmap="Blues")

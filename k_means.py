@@ -5,8 +5,6 @@ import matplotlib.pyplot as plt
 import random
 
 
-
-
 class KMeans:
     def __init__(self, points_list, number_of_classes, epsilon, max_iterations):
         """
@@ -30,7 +28,6 @@ class KMeans:
             for _ in range(self.NUMBER_OF_CLASSES)
         ]
         self.labels = []
-
 
     def compute(self):
         """
@@ -76,11 +73,13 @@ class KMeans:
                 break
             iterations += 1
 
+
     def predict(self, points):
         points = np.array(points)
         d = np.sum((points[:, np.newaxis] - self.centers) ** 2, axis=2)
         return np.argmin(d, axis=1)
 
+    # Associe les numéros de groupes calculés par K-Means aux textures correspondantes
     def map_clusters_to_classes(self, true_labels):
         mapping = {}
         for k in range(self.NUMBER_OF_CLASSES):
@@ -169,6 +168,15 @@ class KMeans:
         plt.show()
 
 
+def divide_array_in_patches(image, patch_size):
+    height, width = image.shape
+    patches = []
+    for y in range(0, height - patch_size + 1, patch_size):
+        for x in range(0, width - patch_size + 1, patch_size):
+            patches.append(image[y : y + patch_size, x : x + patch_size])
+    return patches
+
+
 def divide_in_patches(image_path, patch_size):
     """
     Fonction de découpage de l'image passée en paramètre en patches
@@ -178,12 +186,16 @@ def divide_in_patches(image_path, patch_size):
     :param patch_size : Taille de chaque patch
     """
     image = np.array(Image.open(image_path).convert("L"))
-    height, width = image.shape
-    patches = []
-    for y in range(0, height - patch_size + 1, patch_size):
-        for x in range(0, width - patch_size + 1, patch_size):
-            patches.append(image[y : y + patch_size, x : x + patch_size])
-    return patches
+    return divide_array_in_patches(image, patch_size)
+
+
+def mosaic(patches, n=3):
+    """
+    Reconstruire une image de référence plus grande pour Efros Leung en combinant des patches
+    de plus petite taille, il faut faire attention aux jonctions
+    """
+    rows = [np.hstack(patches[i * n : (i + 1) * n]) for i in range(n)]
+    return np.vstack(rows)
 
 
 def gabor(filter_size, orientation, localization, frequency):
@@ -228,6 +240,7 @@ def convolve(patch, kernel):
     return out
 
 
+# Descripteur utilisant la moyenne et l'écart type
 def describe(patch, filters):
     patch = patch.astype(float)
     features = []
@@ -235,3 +248,13 @@ def describe(patch, filters):
         response = np.abs(convolve(patch, kernel))
         features += [response.mean(), response.std()]
     return np.array(features)
+
+
+def add_noise(patch, sigma):
+    noisy = patch.astype(float) + np.random.normal(0, sigma, patch.shape)
+    return np.clip(noisy, 0, 255)
+
+
+def blur(patch, size):
+    kernel = np.ones((size, size)) / (size * size)
+    return convolve(patch.astype(float), kernel)

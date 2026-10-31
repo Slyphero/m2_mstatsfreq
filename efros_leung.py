@@ -3,221 +3,260 @@ import numpy as np
 import matplotlib.pyplot as plt
 from random import randint
 
+# Accélération des temps de calcul
+from numpy.lib.stride_tricks import sliding_window_view
+
+
 class EfrosLeung:
-	def __init__(self, image_path, synthesis_length, patch_size, epsilon, seed_size):
-		"""
-		Constructeur de la classe EfrosLeung
+    def __init__(
+        self,
+        image_path,
+        synthesis_length,
+        patch_size,
+        epsilon,
+        seed_size,
+        image_array=None,
+    ):
+        """
+        Constructeur de la classe EfrosLeung
 
-		:param image_path: Le chemin relatif de l'image à échantillonner
-		:param synthesis_length: La taille finale de l'image synthétisée
-		:param patch_size: La taille du patch
-		:param epsilon: Paramètre utilisée pour le seuillage lors de la sélection des candidats
-		:param seed_size: Taille de la graine initiale échantillonnée avant génération
-		"""
-		# Initialisation des paramètres
-		self.SYNTHESIS_LENGTH = synthesis_length
-		self.EPSILON = epsilon
+        :param image_path: Le chemin relatif de l'image à échantillonner
+        :param synthesis_length: La taille finale de l'image synthétisée
+        :param patch_size: La taille du patch
+        :param epsilon: Paramètre utilisée pour le seuillage lors de la sélection des candidats
+        :param seed_size: Taille de la graine initiale échantillonnée avant génération
+        """
+        # Initialisation des paramètres
+        self.SYNTHESIS_LENGTH = synthesis_length
+        self.EPSILON = epsilon
 
-		self.SEED_SIZE = seed_size
-		self.SEED = np.array(Image.new("RGB", [self.SEED_SIZE, self.SEED_SIZE]), dtype=np.int16) - 1
+        self.SEED_SIZE = seed_size
+        self.SEED = (
+            np.array(Image.new("RGB", [self.SEED_SIZE, self.SEED_SIZE]), dtype=np.int16)
+            - 1
+        )
 
-		self.PATCH_SIZE = patch_size
+        self.PATCH_SIZE = patch_size
 
-		self.TEXTURE_ARRAY = np.array(Image.open(image_path))
-		self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH, _ = np.shape(self.TEXTURE_ARRAY)
+        if image_array is not None:
+            self.TEXTURE_ARRAY = np.array(image_array)
+        else:
+            self.TEXTURE_ARRAY = np.array(Image.open(image_path))
 
+        # Gérer les images entrées en niveaux de gris
+        if self.TEXTURE_ARRAY.ndim == 2:
+            self.TEXTURE_ARRAY = np.stack([self.TEXTURE_ARRAY] * 3, axis=-1)
 
-	def __sample_example_texture(self):
-		"""
-		Génération de la graine aléatoire à partir de l'image à échantillonner.
-		"""
-		seed_y = randint(0, self.TEXTURE_HEIGHT - self.SEED_SIZE)
-		seed_x = randint(0, self.TEXTURE_WIDTH - self.SEED_SIZE)
+        self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH, _ = np.shape(self.TEXTURE_ARRAY)
 
-		self.SEED = self.TEXTURE_ARRAY[seed_y : seed_y + self.SEED_SIZE,
-								       seed_x : seed_x + self.SEED_SIZE]
+    def __sample_example_texture(self):
+        """
+        Génération de la graine aléatoire à partir de l'image à échantillonner.
+        """
+        seed_y = randint(0, self.TEXTURE_HEIGHT - self.SEED_SIZE)
+        seed_x = randint(0, self.TEXTURE_WIDTH - self.SEED_SIZE)
 
+        self.SEED = self.TEXTURE_ARRAY[
+            seed_y : seed_y + self.SEED_SIZE, seed_x : seed_x + self.SEED_SIZE
+        ]
 
-	def initialize_synthesized_image(self):
-		"""
-		Initialisation de la "toile finale" à synthétiser
-		(ajout de la graine aléatoire au centre et pixels vides autour)
-		"""
-		self.__sample_example_texture()
+    def initialize_synthesized_image(self):
+        """
+        Initialisation de la "toile finale" à synthétiser
+        (ajout de la graine aléatoire au centre et pixels vides autour)
+        """
+        self.__sample_example_texture()
 
-		# -1 pour ne pas confondre les pixels vides avec les éventuels pixels noirs de la texture
-		self.final_image_array = np.array(
-			Image.new("RGB", [self.SYNTHESIS_LENGTH, self.SYNTHESIS_LENGTH]),
-			dtype=np.int16
-		) - 1
+        # -1 pour ne pas confondre les pixels vides avec les éventuels pixels noirs de la texture
+        self.final_image_array = (
+            np.array(
+                Image.new("RGB", [self.SYNTHESIS_LENGTH, self.SYNTHESIS_LENGTH]),
+                dtype=np.int16,
+            )
+            - 1
+        )
 
-		image_center_x = (self.SYNTHESIS_LENGTH - 1) // 2
-		image_center_y = (self.SYNTHESIS_LENGTH - 1) // 2
+        image_center_x = (self.SYNTHESIS_LENGTH - 1) // 2
+        image_center_y = (self.SYNTHESIS_LENGTH - 1) // 2
 
-		start_x = image_center_x - self.SEED_SIZE // 2
-		start_y = image_center_y - self.SEED_SIZE // 2
+        start_x = image_center_x - self.SEED_SIZE // 2
+        start_y = image_center_y - self.SEED_SIZE // 2
 
-		self.final_image_array[start_y : start_y + self.SEED_SIZE,
-						 	   start_x : start_x + self.SEED_SIZE] = self.SEED
+        self.final_image_array[
+            start_y : start_y + self.SEED_SIZE, start_x : start_x + self.SEED_SIZE
+        ] = self.SEED
 
+    def __fill_candidates_pixels(self):
+        """
+        Recherche de tous les pixels candidats à remplir lors d'une étape précise
+        :return: Les coordonnées des pixels à remplir à cette étape
+        """
+        candidates_pixels = []
 
-	def __fill_candidates_pixels(self):
-		"""
-		Recherche de tous les pixels candidats à remplir lors d'une étape précise
-		:return: Les coordonnées des pixels à remplir à cette étape
-		"""
-		candidates_pixels = []
+        for y in range(0, self.SYNTHESIS_LENGTH):
+            for x in range(0, self.SYNTHESIS_LENGTH):
+                if self.final_image_array[y, x, 0] == -1:
+                    if self.__count_filled_neighbors_patch(y, x) > 0:
+                        candidates_pixels.append((y, x))
+        return candidates_pixels
 
-		for y in range(0, self.SYNTHESIS_LENGTH):
-			for x in range(0, self.SYNTHESIS_LENGTH):
-				if self.final_image_array[y, x, 0] == -1:
-					if self.__count_filled_neighbors_patch(y, x) > 0:
-						candidates_pixels.append((y, x))
-		return candidates_pixels
+    def __count_filled_neighbors_patch(self, y_candidate, x_candidate):
+        """
+        Pour un pixel passé en paramètre, renvoie le nombre de voisins non vides dans le périmètre du patch.
+        :param y_candidate: Ligne du pixel passé en paramètre
+        :param x_candidate: Colonne du pixel passé en paramètre
+        :return: Le nombre de voisins non vides dans le périmètre du patch.
+        """
+        half = self.PATCH_SIZE // 2
 
+        patch_area = self.final_image_array[
+            max(0, y_candidate - half) : min(
+                self.SYNTHESIS_LENGTH, y_candidate + half + 1
+            ),
+            max(0, x_candidate - half) : min(
+                self.SYNTHESIS_LENGTH, x_candidate + half + 1
+            ),
+        ]
 
-	def __count_filled_neighbors_patch(self, y_candidate, x_candidate):
-		"""
-		Pour un pixel passé en paramètre, renvoie le nombre de voisins non vides dans le périmètre du patch.
-		:param y_candidate: Ligne du pixel passé en paramètre
-		:param x_candidate: Colonne du pixel passé en paramètre
-		:return: Le nombre de voisins non vides dans le périmètre du patch.
-		"""
-		half = self.PATCH_SIZE // 2
+        neighbors = np.sum(patch_area[:, :, 0] != -1)
+        return neighbors
 
-		patch_area = self.final_image_array[max(0, y_candidate - half) :
-									        	min(self.SYNTHESIS_LENGTH, y_candidate + half + 1),
-											max(0, x_candidate - half) :
-												min(self.SYNTHESIS_LENGTH, x_candidate + half + 1)]
+    def __set_patch_and_mask(self, y_best, x_best):
+        """
+        Une fois le pixel vide candidat sélectionné dans l'image synthétisée, conserve le patch et le masque associés
+        à appliquer lors de la recherche des pixels compatibles depuis l'image source à échantillonner.
+        :param y_best: Ligne du pixel candidat sélectionné
+        :param x_best: Colonne du pixel candidat sélectionné
+        """
+        self.patch = (
+            np.array(
+                Image.new("RGB", [self.PATCH_SIZE, self.PATCH_SIZE]), dtype=np.int16
+            )
+            - 1
+        )
+        self.patch_mask = np.zeros([self.PATCH_SIZE, self.PATCH_SIZE], dtype=np.int16)
 
-		neighbors = np.sum(patch_area[:, :, 0] != -1)
-		return neighbors
+        for y in range(0, self.PATCH_SIZE):
+            for x in range(0, self.PATCH_SIZE):
+                offset_y = y_best - self.PATCH_SIZE // 2 + y
+                offset_x = x_best - self.PATCH_SIZE // 2 + x
 
+                is_offset_valid = (
+                    offset_y >= 0
+                    and offset_x >= 0
+                    and offset_y < self.SYNTHESIS_LENGTH
+                    and offset_x < self.SYNTHESIS_LENGTH
+                )
 
-	def __set_patch_and_mask(self, y_best, x_best):
-		"""
-		Une fois le pixel vide candidat sélectionné dans l'image synthétisée, conserve le patch et le masque associés
-		à appliquer lors de la recherche des pixels compatibles depuis l'image source à échantillonner.
-		:param y_best: Ligne du pixel candidat sélectionné
-		:param x_best: Colonne du pixel candidat sélectionné
-		"""
-		self.patch = np.array(Image.new("RGB", [self.PATCH_SIZE, self.PATCH_SIZE]), dtype=np.int16) - 1
-		self.patch_mask = np.zeros([self.PATCH_SIZE, self.PATCH_SIZE], dtype=np.int16)
+                if (
+                    is_offset_valid
+                    and self.final_image_array[offset_y, offset_x, 0] != -1
+                ):
+                    self.patch[y, x] = self.final_image_array[offset_y, offset_x]
+                    self.patch_mask[y, x] = 1
 
-		for y in range(0, self.PATCH_SIZE):
-			for x in range(0, self.PATCH_SIZE):
-				offset_y = y_best - self.PATCH_SIZE // 2 + y
-				offset_x = x_best - self.PATCH_SIZE // 2 + x
+    def __find_candidate_coordinates(self):
+        """
+        Fonction qui choisit un pixel de l'image à échantillonner à appliquer aux coordonnées du pixel vide
+        candidat précédemment sélectionné.
+        """
+        half = self.PATCH_SIZE // 2
+        # y_range = self.TEXTURE_HEIGHT - self.PATCH_SIZE + 1
+        # x_range = self.TEXTURE_WIDTH - self.PATCH_SIZE + 1
 
-				is_offset_valid = (offset_y >= 0 and offset_x >= 0 and
-					   offset_y < self.SYNTHESIS_LENGTH and offset_x < self.SYNTHESIS_LENGTH)
+        ssd_matrix = np.full((self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH), np.inf)
 
-				if is_offset_valid and self.final_image_array[offset_y, offset_x, 0] != -1:
-					self.patch[y, x] = self.final_image_array[offset_y, offset_x]
-					self.patch_mask[y, x] = 1
+        mask_3d = self.patch_mask[:, :, np.newaxis]
+        patch_3d = self.patch.astype(np.int32)
 
+        windows = sliding_window_view(
+            self.TEXTURE_ARRAY, (self.PATCH_SIZE, self.PATCH_SIZE), axis=(0, 1)
+        )
+        windows = windows.transpose(0, 1, 3, 4, 2).astype(np.int32)
+        ssd = np.sum(((windows - patch_3d) * mask_3d) ** 2, axis=(2, 3, 4))
 
-	def __find_candidate_coordinates(self):
-		"""
-		Fonction qui choisit un pixel de l'image à échantillonner à appliquer aux coordonnées du pixel vide
-		candidat précédemment sélectionné.
-		"""
-		half = self.PATCH_SIZE // 2
-		y_range = self.TEXTURE_HEIGHT - self.PATCH_SIZE + 1
-		x_range = self.TEXTURE_WIDTH - self.PATCH_SIZE + 1
+        ssd_matrix = np.full((self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH), np.inf)
+        ssd_matrix[half : half + ssd.shape[0], half : half + ssd.shape[1]] = ssd
 
-		ssd_matrix = np.full((self.TEXTURE_HEIGHT, self.TEXTURE_WIDTH), np.inf)
+        # for y in range(0, y_range):
+        # 	for x in range(0, x_range):
+        # 		bloc_source = self.TEXTURE_ARRAY[y : y + self.PATCH_SIZE, x : x + self.PATCH_SIZE].astype(np.int32)
+        # 		diff_masquee = (bloc_source - patch_3d) * mask_3d
+        # 		ssd_matrix[y + half, x + half] = np.sum(diff_masquee ** 2)
 
-		mask_3d = self.patch_mask[:, :, np.newaxis]
-		patch_3d = self.patch.astype(np.int32)
+        ssd_min = np.min(ssd_matrix)
+        threshold = ssd_min * (1 + self.EPSILON) + 1e-9
 
-		for y in range(0, y_range):
-			for x in range(0, x_range):
-				bloc_source = self.TEXTURE_ARRAY[y : y + self.PATCH_SIZE, x : x + self.PATCH_SIZE].astype(np.int32)
-				diff_masquee = (bloc_source - patch_3d) * mask_3d
-				ssd_matrix[y + half, x + half] = np.sum(diff_masquee ** 2)
+        matching_candidates = np.argwhere(ssd_matrix <= threshold)
+        choice = randint(0, len(matching_candidates) - 1)
+        chosen_y, chosen_x = matching_candidates[choice]
 
-		ssd_min = np.min(ssd_matrix)
-		threshold = ssd_min * (1 + self.EPSILON)
+        return (chosen_y, chosen_x)
 
-		matching_candidates = np.argwhere(ssd_matrix <= threshold)
-		choice = randint(0, len(matching_candidates) - 1)
-		chosen_y, chosen_x = matching_candidates[choice]
+    def fill_synthesized_image(self):
+        """
+        Fonction finale qui assemble l'image finale synthétisée.
+        """
+        self.fill_synthesized_image_partial(float("inf"))
 
-		return (chosen_y, chosen_x)
+    def fill_synthesized_image_partial(self, iterations_count):
+        """
+        Fonction qui assemble l'image synthétisée sur un certain nombre de pixels fixé par l'utilisateur.
+        :param iterations_count: Le nombre d'itérations maximales (pour la démo interactive car l'algo
+        est lent)
+        """
+        candidates = self.__fill_candidates_pixels()
+        count = 1
+        while len(candidates) > 0 and count <= iterations_count:
+            neighbors_array = []
+            for candidate in candidates:
+                neighbors_array.append(
+                    self.__count_filled_neighbors_patch(candidate[0], candidate[1])
+                )
 
+            best_index = np.argmax(neighbors_array)
+            y_best, x_best = candidates[best_index][0], candidates[best_index][1]
 
-	def fill_synthesized_image(self):
-		"""
-		Fonction finale qui assemble l'image finale synthétisée.
-		"""
-		candidates = self.__fill_candidates_pixels()
+            candidates.pop(best_index)
+            self.__set_patch_and_mask(y_best, x_best)
 
-		while len(candidates) > 0:
-			neighbors_array = []
-			for candidate in candidates:
-				neighbors_array.append(self.__count_filled_neighbors_patch(candidate[0], candidate[1]))
+            chosen_y, chosen_x = self.__find_candidate_coordinates()
+            self.final_image_array[y_best, x_best] = self.TEXTURE_ARRAY[
+                chosen_y, chosen_x
+            ]
 
-			best_index = np.argmax(neighbors_array)
-			y_best, x_best = candidates[best_index][0], candidates[best_index][1]
+            for i in range(y_best - 1, y_best + 2):
+                for j in range(x_best - 1, x_best + 2):
+                    if i == y_best and j == x_best:
+                        continue
+                    if (
+                        0 <= i
+                        and i < self.SYNTHESIS_LENGTH
+                        and 0 <= j
+                        and j < self.SYNTHESIS_LENGTH
+                    ):
+                        if (
+                            self.final_image_array[i, j, 0] == -1
+                            and (i, j) not in candidates
+                        ):
+                            candidates.append((i, j))
 
-			candidates.pop(best_index)
-			self.__set_patch_and_mask(y_best, x_best)
+            count += 1
 
-			chosen_y, chosen_x = self.__find_candidate_coordinates()
-			self.final_image_array[y_best, x_best] = self.TEXTURE_ARRAY[chosen_y, chosen_x]
+    def plot_images(self):
+        """
+        Fonction d'affichage,
+                à gauche : image à échantillonner,
+                à droite : image synthétisée (éventuellement partiellement)
+        """
+        plt.subplot(1, 2, 1)
+        plt.title("Image source")
+        plt.imshow(self.TEXTURE_ARRAY.astype(np.uint8))
+        plt.subplot(1, 2, 2)
+        plt.title("Image synthétisée")
+        plt.imshow(self.final_image_array.astype(np.uint8))
+        plt.show()
 
-			for i in range(y_best - 1, y_best + 2):
-				for j in range (x_best - 1, x_best + 2):
-					if i == y_best and j == x_best:
-						continue
-					if 0 <= i and i < self.SYNTHESIS_LENGTH and 0 <= j and j < self.SYNTHESIS_LENGTH:
-						if self.final_image_array[i, j, 0] == -1 and (i, j) not in candidates:
-							candidates.append((i, j))
-
-	def fill_synthesized_image_partial(self, iterations_count):
-		"""
-		Fonction qui assemble l'image synthétisée sur un certain nombre de pixels fixé par l'utilisateur.
-		:param iterations_count: Le nombre d'itérations maximales (pour la démo interactive car l'algo
-		est lent)
-		"""
-		candidates = self.__fill_candidates_pixels()
-		count = 1
-		while len(candidates) > 0 and count <= iterations_count:
-			neighbors_array = []
-			for candidate in candidates:
-				neighbors_array.append(self.__count_filled_neighbors_patch(candidate[0], candidate[1]))
-
-			best_index = np.argmax(neighbors_array)
-			y_best, x_best = candidates[best_index][0], candidates[best_index][1]
-
-			candidates.pop(best_index)
-			self.__set_patch_and_mask(y_best, x_best)
-
-			chosen_y, chosen_x = self.__find_candidate_coordinates()
-			self.final_image_array[y_best, x_best] = self.TEXTURE_ARRAY[chosen_y, chosen_x]
-
-			for i in range(y_best - 1, y_best + 2):
-				for j in range (x_best - 1, x_best + 2):
-					if i == y_best and j == x_best:
-						continue
-					if 0 <= i and i < self.SYNTHESIS_LENGTH and 0 <= j and j < self.SYNTHESIS_LENGTH:
-						if self.final_image_array[i, j, 0] == -1 and (i, j) not in candidates:
-							candidates.append((i, j))
-
-			count += 1
-
-
-	def plot_images(self):
-		"""
-		Fonction d'affichage,
-			à gauche : image à échantillonner,
-			à droite : image synthétisée (éventuellement partiellement)
-		"""
-		plt.subplot(1, 2, 1)
-		plt.title("Image source")
-		plt.imshow(self.TEXTURE_ARRAY.astype(np.uint8))
-		plt.subplot(1, 2, 2)
-		plt.title("Image synthétisée")
-		plt.imshow(self.final_image_array.astype(np.uint8))
-		plt.show()
+    def get_gray_image(self):
+        assert (self.final_image_array >= 0).all(), "Il reste des pixels non remplis"
+        return self.final_image_array.astype(np.uint8)[:, :, 0]
