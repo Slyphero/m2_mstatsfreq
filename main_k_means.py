@@ -42,6 +42,7 @@ if __name__ == "__main__":
 
         raw_DT[num] = patches[half:]
 
+        # Séparation des patches en deux moitiés, données entraînement et données tests
         for p in patches[:half]:
             points_DO.append(describe(p, FILTERS))
             labels_DO.append(num)
@@ -55,6 +56,7 @@ if __name__ == "__main__":
     labels_DO = np.array(labels_DO)
     labels_DT = np.array(labels_DT)
 
+    # moyenne et écart type
     mu = points_DO.mean(axis=0)
     sd = points_DO.std(axis=0) + 1e-9
 
@@ -88,14 +90,17 @@ if __name__ == "__main__":
     SYNTH_SIZE = 64
     N_IMAGES = 3
 
-
-    # On cumule plusieurs images par texture pour éviter de se baser sur un trop faible nombre de patch
+    print(f"{'Texture':25s} normal bruit flou")
     for num in range(number_of_textures):
         ok, total = 0, 0
         ok_n, total_n = 0, 0
         ok_b, total_b = 0, 0
 
+        # On cumule plusieurs images par texture pour éviter de se baser sur un trop faible nombre de patch
         for k in range(N_IMAGES):
+            # Puisque les patches sont de taille 32x32, la mosaïque génère des images 96x96 comme
+            # entrée pour Efros Leung qui synthétise dans ce contexte des images 64x64, compromis
+            # entre vitesse d'exécution et résolution / taille de la synthèse
             source = mosaic(raw_DT[num][k * 9 : (k + 1) * 9])
             synth = EfrosLeung(None, SYNTH_SIZE, 9, 0.1, 15, image_array=source)
             synth.initialize_synthesized_image()
@@ -115,9 +120,15 @@ if __name__ == "__main__":
             ok_b += o
             total_b += t
 
-        print(f"{TEXTURES[num]:25s} {ok/total:.2f}  {ok_n/total_n:.2f}  {ok_b/total_b:.2f}")
+        print(
+            f"{TEXTURES[num]:25s} {ok/total:.2f}  {ok_n/total_n:.2f}  {ok_b/total_b:.2f}"
+        )
 
     def rate_degraded(degrade, param):
+        """
+        degrade : fonction de dégradation
+        param : paramètre de dégradation
+        """
         ok, total = 0, 0
         for num in range(number_of_textures):
             # Limitation à 20 patches par texture, itérations coûteuses
@@ -142,8 +153,11 @@ if __name__ == "__main__":
     for valid, p in zip(labels_DT, pred):
         conf[valid, p] += 1
 
-    # Diagonale principale : nombre de bonnes prédictions
     def plot_confusion(conf):
+        """
+        Fonction permettant d'afficher la matrice de confusion de manière graphique
+        la diagonale principale représente le nombre de bonnes prédictions
+        """
         fig, ax = plt.subplots(figsize=(5, 4))
         im = ax.imshow(conf, cmap="Blues")
         fig.colorbar(im, ax=ax)
@@ -166,6 +180,7 @@ if __name__ == "__main__":
 
     plot_confusion(conf)
 
+    # Afficher les filtres utilisés
     fig, axes = plt.subplots(3, 4, figsize=(10, 8))
     for ax, kernel in zip(axes.ravel(), FILTERS):
         ax.imshow(kernel, cmap="gray")

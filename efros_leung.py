@@ -169,6 +169,7 @@ class EfrosLeung:
         mask_3d = self.patch_mask[:, :, np.newaxis]
         patch_3d = self.patch.astype(np.int32)
 
+        # Remplace l'ancienne double boucle pour que les calculs soient plus rapides
         windows = sliding_window_view(
             self.TEXTURE_ARRAY, (self.PATCH_SIZE, self.PATCH_SIZE), axis=(0, 1)
         )

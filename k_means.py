@@ -73,14 +73,18 @@ class KMeans:
                 break
             iterations += 1
 
-
     def predict(self, points):
+        """
+        Associe à chaque point le numéro du groupe de centre le plus proche.
+        """
         points = np.array(points)
         d = np.sum((points[:, np.newaxis] - self.centers) ** 2, axis=2)
         return np.argmin(d, axis=1)
 
-    # Associe les numéros de groupes calculés par K-Means aux textures correspondantes
     def map_clusters_to_classes(self, true_labels):
+        """
+        Associe les numéros de groupes calculés par K-Means aux textures correspondantes
+        """
         mapping = {}
         for k in range(self.NUMBER_OF_CLASSES):
             members = true_labels[self.labels == k]
@@ -193,6 +197,13 @@ def mosaic(patches, n=3):
     """
     Reconstruire une image de référence plus grande pour Efros Leung en combinant des patches
     de plus petite taille, il faut faire attention aux jonctions
+    Pour une liste de patches A B C D E F G H I
+    A B C
+    D E F
+    G H I
+
+    :param patches : Le nombre de patches utilisés pour le pavage
+    :param n : Le côté du pavage, n=3 signifie un pavage de 3 par 3 donc neuf patches
     """
     rows = [np.hstack(patches[i * n : (i + 1) * n]) for i in range(n)]
     return np.vstack(rows)
@@ -200,10 +211,10 @@ def mosaic(patches, n=3):
 
 def gabor(filter_size, orientation, localization, frequency):
     """
-    :param filter_size taille du noyau
-    :param orientation (theta)
-    :param localization (sigma)
-    :param frequency (lambda)
+    :param filter_size : taille du noyau
+    :param orientation : (theta)
+    :param localization : (sigma)
+    :param frequency : (lambda)
     """
     radius = filter_size // 2
     y, x = np.mgrid[-radius : radius + 1, -radius : radius + 1]
@@ -220,8 +231,8 @@ def gabor(filter_size, orientation, localization, frequency):
 
 def convolve(patch, kernel):
     """
-    :param patch patch à convoluer
-    :param kernel noyau de convolution
+    :param patch : patch à convoluer
+    :param kernel : noyau de convolution
     """
     height, width = patch.shape
     kernel_size = kernel.shape[0]
@@ -240,8 +251,10 @@ def convolve(patch, kernel):
     return out
 
 
-# Descripteur utilisant la moyenne et l'écart type
 def describe(patch, filters):
+    """
+    Descripteur utilisant la moyenne et l'écart type
+    """
     patch = patch.astype(float)
     features = []
     for kernel in filters:
@@ -251,10 +264,16 @@ def describe(patch, filters):
 
 
 def add_noise(patch, sigma):
+    """
+    Fonction retournant la version bruitée d'un patch
+    """
     noisy = patch.astype(float) + np.random.normal(0, sigma, patch.shape)
     return np.clip(noisy, 0, 255)
 
 
 def blur(patch, size):
+    """
+    Fonction retournant la version floutée d'un patch
+    """
     kernel = np.ones((size, size)) / (size * size)
     return convolve(patch.astype(float), kernel)

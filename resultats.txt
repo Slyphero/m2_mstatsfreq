@@ -1,0 +1,18 @@
+DO : 0.83
+DT : 0.8175
+Texture                   normal bruit flou
+classif_data/D1.gif       0.83  0.50  0.92
+classif_data/D4.gif       0.92  1.00  0.00
+classif_data/D2.gif       1.00  0.83  0.83
+classif_data/D45.gif      0.50  0.50  0.25
+Sigma | Taux réussite bruité
+bruit 0 0.85
+bruit 5 0.85
+bruit 10 0.85
+bruit 20 0.79
+bruit 40 0.65
+Taille noyau | Taux réussite flouté
+flou 1 0.85
+flou 3 0.54
+flou 5 0.44
+flou 7 0.35
