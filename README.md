@@ -1,4 +1,20 @@
-# Synthèse de textures
+# Rendu de projet 
+
+## Installation
+Il faut générer un environnement virtuel (commandes à adapter selon le système d'exploitation)
+```bash
+python -m venv .venv
+```
+```bash
+source .venv/bin/activate
+```
+```bash
+pip install -r requirements.txt
+```
+```bash
+python main_<le_main_que_vous_souhaitez>.py
+```
+## Synthèse de textures
 
 **Algorithme utilisé** : Efros Leung  
 
@@ -13,7 +29,7 @@ En ce qui concerne la taille des patch, c'est aussi un compromis entre plusieurs
 
 Un patch plus grand préservera mieux les grandes structures en étant plus long à calculer, un patch plus petit sera plus rapide, autorisera beaucoup de candidats mais il préservera moins les motifs plus larges et pourrait sembler plus bruité.  
 
-# Classification
+## Classification
 
 **Algorithme** : K-Means  
 **Descripteur** : Gabor  
